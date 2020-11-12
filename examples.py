@@ -28,7 +28,7 @@ with open("sample.data",'rb') as f:
 
         fig, (ax0, ax1, ax3) = plt.subplots(3, figsize=(8,8), tight_layout=True)
         # Plot the input data
-        ax0.title.set_text('Input data')
+        ax0.title.set_text('Input data ({})'.format(device))
         ax0.plot(data["i"]*0.001)
         ax0.set_ylabel("Current [A]")
         ax0.set_xlabel("Sample")
@@ -40,7 +40,7 @@ with open("sample.data",'rb') as f:
         lns1 = ax1.plot(f["I_WF"], label="Current")
         lns2 = ax2.plot(f["U_WF"], c='orange', label="Voltage")
         # Plot formatting
-        ax1.set_ylabel("Current [mA]")
+        ax1.set_ylabel("Current [A]")
         ax2.set_ylabel("Voltage [V]")
         ax1.set_xlabel("Sample")
         ax1.legend(lns1+lns2, [l.get_label() for l in lns1+lns2], loc=0)
