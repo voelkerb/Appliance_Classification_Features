@@ -95,5 +95,4 @@ plt.show()
 
 Which gives you a plot like:
 
-![](./docu/plot.png =250x)
-
+<img src="docu\plot.png" width="500">
