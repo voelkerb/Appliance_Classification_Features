@@ -46,38 +46,44 @@ The function returns a <em>dictionary</em> containing the following features (wi
 
 ## How To Use:
 ```python
-import features as feat
+import features.features as feat
 from numbers import Number
 import matplotlib.pyplot as plt
+import numpy as np
+
+# Load data
+...
 
 # v and i are numpy arrays of equal length with values in Volt and Ampere
 # sr is the samplingrate of the data
 f = feat.calculate(v,i,sr)
 
-# Print skalar features
+# Print features
 for k in f:
-  if isinstance(f[k], Number): 
-    print("{}: {}".format(k, round(f[k], 2)))
-  else:
-    print("{}: {}".format(k, type(f[k])
+    if isinstance(f[k], Number): 
+        print(" {:>8}:  {:7.2f}".format(k, round(float(f[k]), 2)))
+    else:
+        print(" {:>8}: [{:7.2f} ... {:7.2f}]".format(k, f[k][0], f[k][-1]))
 
-fig, (ax1, ax2) = plt.subplots(2)
+fig, (ax1, ax3) = plt.subplots(2, tight_layout=True)
+
 # Plot the avg current and voltage waveform
-ax1.title.set_text('Avg. Voltage and Current WF')
-ax1.plot(f["I_WF"])
+lns1 = ax1.plot(f["I_WF"], label="Current")
+ax2 = ax1.twinx()
+lns2 = ax2.plot(f["U_WF"], c='orange', label="Voltage")
+# Format plot
+ax1.title.set_text("Avg. Voltage and Current WF of {}".format(device))
 ax1.set_ylabel("Current [A]")
-ax1_2 = ax1.twinx()
-ax1_2.plot(f["U_WF"])
-ax1_2.set_ylabel("Voltage [V]")
+ax2.set_ylabel("Voltage [V]")
 ax1.set_xlabel("Sample")
+ax1.legend(lns1+lns2, [l.get_label() for l in lns1+lns2], loc=0)
 
-# It's an FFT of size 1024
-xf = np.linspace(0.0, 0.5*sr, 1024)
-ax2.title.set_text('Frequency Spectrum')
-ax2.plot(xf, 2.0/N * np.abs(yf[:N//2]))
-ax2.semilogy(xf, np.sqrt(f["FFT"]))
-ax2.set_ylabel("Spectrum [RMS]")
-ax2.set_xlabel("Frequency [Hz]")
+# Plot FFT
+xf = np.linspace(0.0, 0.5*sr, 512) # FFT size is 1024
+ax3.semilogy(xf, np.sqrt(f["FFT"][:512]))
+ax3.title.set_text("Frequency Spectrum of {}".format(device))
+ax3.set_ylabel("Spectrum [RMS]")
+ax3.set_xlabel("Frequency [Hz]")
 
 plt.show()
 ```
