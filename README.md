@@ -8,7 +8,7 @@ To calculate all frequency domain features, the samplingrate should be higher th
 
 The function returns a <em>dictionary</em> containing the following features (with the abbrevation used as dictionary keys):
 
-## Time domain:
+## Time Domain:
 
 - Active (P), Reactive (Q), Apparent (S) power
 - Resistance (R), Admittance (Y)
@@ -26,10 +26,10 @@ The function returns a <em>dictionary</em> containing the following features (wi
 - Current over time (COT)
 - Periode to steady state (PSS) 
 - Phase angle (COS_PHI)
-- V-I Trajectory (VIT)
+- V-I trajectory (VIT)
 - Inrush current ratio (ICR)
 
-## Frequency domain:
+## Frequency Domain:
 
 - Harmonic energy distribution (HED)
 - Total harmonic distortion (THD)
@@ -43,3 +43,41 @@ The function returns a <em>dictionary</em> containing the following features (wi
 
 - 1024 point Fast Fourier Transform (FFT)
 - Mean current, voltage waveform (I_WF, U_WF)
+
+## How To Use:
+```python
+import features as feat
+from numbers import Number
+import matplotlib.pyplot as plt
+
+# v and i are numpy arrays of equal length with values in Volt and Ampere
+# sr is the samplingrate of the data
+f = feat.calculate(v,i,sr)
+
+# Print skalar features
+for k in f:
+  if isinstance(f[k], Number): 
+    print("{}: {}".format(k, round(f[k], 2)))
+  else:
+    print("{}: {}".format(k, type(f[k])
+
+fig, (ax1, ax2) = plt.subplots(2)
+# Plot the avg current and voltage waveform
+ax1.title.set_text('Avg. Voltage and Current WF')
+ax1.plot(f["I_WF"])
+ax1.set_ylabel("Current [A]")
+ax1_2 = ax1.twinx()
+ax1_2.plot(f["U_WF"])
+ax1_2.set_ylabel("Voltage [V]")
+ax1.set_xlabel("Sample")
+
+# It's an FFT of size 1024
+xf = np.linspace(0.0, 0.5*sr, 1024)
+ax2.title.set_text('Frequency Spectrum')
+ax2.plot(xf, 2.0/N * np.abs(yf[:N//2]))
+ax2.semilogy(xf, np.sqrt(f["FFT"]))
+ax2.set_ylabel("Spectrum [RMS]")
+ax2.set_xlabel("Frequency [Hz]")
+
+plt.show()
+```
