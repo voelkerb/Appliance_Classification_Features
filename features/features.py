@@ -171,10 +171,11 @@ def calculate(v: np.array, i: np.array, sr: int):
     # use the welch method to get frequencs spectrum
     f, FFT = scipy.signal.welch(data["i"], sr, nperseg=NFFT, scaling="spectrum", window="hamming", average='median')
     
+    # Old FFT Style:
     # Use FFT
     # hamData = np.hamming(NFFT)*data["i"][:NFFT]
     # FFT = np.abs(np.fft.rfft(hamData, norm="ortho", n=NFFT)[:NFFT//2]/NFFT)
-
+    # f = np.linspace(0.0, 0.5*sr, NFFT/2)
 
     # ********************* Harmonic Energy Distribution ******************
     # Vector of 20 values; Magnitudes of 50, 100, 150, ..., 1000Hz
@@ -183,8 +184,6 @@ def calculate(v: np.array, i: np.array, sr: int):
     # Use margin around goal freq to calculate single harmonic magnitude
     # NOTE: This is not nice
     indices = [[i for i, f_ in enumerate(f) if abs(f_-freq_) < 3] for freq_ in HEDFreqs]
-    #for fr, ind in zip(HEDFreqs, indices):
-    #    print("{}: {} - {} - {}".format(fr, ind, f[ind], spec[ind]))
     Harm = [sum(FFT[ind]) for ind in indices]
     HED = Harm[1:]/Harm[0]
 
@@ -215,7 +214,7 @@ def calculate(v: np.array, i: np.array, sr: int):
     # ***************** Wavelet transform **************************
     # Needs to be investigated further. Waveform has better FREQUENCY
     # resolution for lower frequencies
-    # cA, cD = pywt.dwt(data["i"], 'db1')
+    cA, cD = pywt.dwt(data["i"], 'db1')
     
     x = {
         "P":        p, 
@@ -245,11 +244,9 @@ def calculate(v: np.array, i: np.array, sr: int):
         "OER":      OER, 
         "TRI":      TRI, 
         "SC":       SC, 
-        #"WT":      WT,
+        "WT":      WT,
     }
     # Additional stuff
-    x["U_NORM"] = U_norm
-    x["I_NORM"] = I_norm
     x["I_WF"] = I_WF
     x["U_WF"] = U_WF
     x["FFT"] = FFT

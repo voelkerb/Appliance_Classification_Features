@@ -26,31 +26,31 @@ with open("sample.data",'rb') as f:
             else:
                 print(" {:>8}: [{:7.2f} ... {:7.2f}]".format(k, f[k][0], f[k][-1]))
 
-        fig, (ax) = plt.subplots(1)
-        # Plot the avg current and voltage waveform
-        ax.title.set_text('Input data')
-        ax.plot(data["i"])
-        ax.set_ylabel("Current [mA]")
-        ax.set_xlabel("Sample")
-        ax.axvline(x=int(0.5*sr), linewidth=2, color=(0,0,0))
+        fig, (ax0, ax1, ax3) = plt.subplots(3, figsize=(8,8), tight_layout=True)
+        # Plot the input data
+        ax0.title.set_text('Input data')
+        ax0.plot(data["i"])
+        ax0.set_ylabel("Current [mA]")
+        ax0.set_xlabel("Sample")
+        ax0.axvline(x=int(0.5*sr), linewidth=2, color=(0,0,0))
 
-        fig, (ax1, ax2) = plt.subplots(2)
         # Plot the avg current and voltage waveform
         ax1.title.set_text('Avg. Voltage and Current WF')
-        ax1_2 = ax1.twinx()
-        ax1_2.plot(f["U_WF"], c='orange', label="Voltage")
-        ax1.plot(f["I_WF"], label="Current")
+        ax2 = ax1.twinx()
+        lns1 = ax1.plot(f["I_WF"], label="Current")
+        lns2 = ax2.plot(f["U_WF"], c='orange', label="Voltage")
+        # Plot formatting
         ax1.set_ylabel("Current [mA]")
-        ax1_2.set_ylabel("Voltage [V]")
+        ax2.set_ylabel("Voltage [V]")
         ax1.set_xlabel("Sample")
-        plt.legend()
-
-        # It's an FFT of size 1024
-        xf = np.linspace(0.0, 0.5*sr, 512)
-        ax2.title.set_text('Frequency Spectrum')
-        ax2.semilogy(xf, np.sqrt(f["FFT"][:512]))
-        ax2.set_ylabel("Spectrum [RMS]")
-        ax2.set_xlabel("Frequency [Hz]")
+        ax1.legend(lns1+lns2, [l.get_label() for l in lns1+lns2], loc=0)
+        
+        # Plot the Frequency Spectrum
+        xf = np.linspace(0.0, 0.5*sr, 512) # FFT size is 1024
+        ax3.title.set_text('Frequency Spectrum')
+        ax3.semilogy(xf, np.sqrt(f["FFT"][:512]))
+        ax3.set_ylabel("Spectrum [RMS]")
+        ax3.set_xlabel("Frequency [Hz]")
 
         plt.show()
 # %%
