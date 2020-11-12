@@ -29,8 +29,8 @@ with open("sample.data",'rb') as f:
         fig, (ax0, ax1, ax3) = plt.subplots(3, figsize=(8,8), tight_layout=True)
         # Plot the input data
         ax0.title.set_text('Input data')
-        ax0.plot(data["i"])
-        ax0.set_ylabel("Current [mA]")
+        ax0.plot(data["i"]*0.001)
+        ax0.set_ylabel("Current [A]")
         ax0.set_xlabel("Sample")
         ax0.axvline(x=int(0.5*sr), linewidth=2, color=(0,0,0))
 

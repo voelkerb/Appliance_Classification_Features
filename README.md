@@ -65,7 +65,12 @@ for k in f:
     else:
         print(" {:>8}: [{:7.2f} ... {:7.2f}]".format(k, f[k][0], f[k][-1]))
 
-fig, (ax1, ax3) = plt.subplots(2, tight_layout=True)
+fig, (ax0, ax1, ax3) = plt.subplots(3)
+# Plot the input data
+ax0.title.set_text('Input data')
+ax0.plot(i)
+ax0.set_ylabel("Current [A]")
+ax0.set_xlabel("Sample")
 
 # Plot the avg current and voltage waveform
 lns1 = ax1.plot(f["I_WF"], label="Current")
@@ -87,3 +92,8 @@ ax3.set_xlabel("Frequency [Hz]")
 
 plt.show()
 ```
+
+Which gives you a plot like:
+
+![](./docu/plot.png =250x)
+
