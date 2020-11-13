@@ -55,5 +55,6 @@ with open("sample.data",'rb') as f:
         ax3.set_ylabel("Spectrum [RMS]")
         ax3.set_xlabel("Frequency [Hz]")
 
+        plt.savefig("docu/plot.png")
         plt.show()
 # %%
