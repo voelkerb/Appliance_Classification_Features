@@ -2,8 +2,104 @@ import numpy as np
 import scipy
 from scipy import signal
 import math
+import pywt
+
+def fft(data: np.array, sr:int, win:str=None, scale:str="mag", beta:float=9.0):
+    r"""
+    Calculate a normalized one sided rfft of the given one dimensional input data.
+    Kudos go to Florian Wolling (florian.wolling@uni-siegen.de)
+
+    :param  data: waveform
+    :type   data: np.array
+    :param    sr: Samplingrate of waveform
+    :type     sr: int
+    :param   win: Window to apply, one of \"hamming\", \"hanning\", \"blackman\", \"kaiser\".
+                  If window unknown, box window is used.
+    :type    win: str
+    :param scale: Returned fft scaling. One of \"mag\"=magnitude, \"pwr\"=power spectrum
+    :type  scale: str
+    :param  beta: Beta value of kaiser window
+    :type   beta: float
+
+    :return: tuple of fft result and frequencies
+    :rtype: tuple
+    """
+    # Construct window
+    win_data = np.ones(len(data))
+    if win == "hamming": win_data = np.hamming(len(data))
+    elif win == "hanning": win_data = np.hanning(len(data))
+    elif win == "blackman": win_data = np.blackman(len(data))
+    elif win == "kaiser": win_data = np.kaiser(len(data), beta)
+    # Apply windowed FFT
+    fft = np.abs(np.fft.rfft(win_data*data))/len(data)
+    # Scale
+    if scale == "mag": fft = fft*2
+    elif scale == "pwr": fft = fft**2
+    # Calc freqs
+    xf = np.fft.rfftfreq(len(data), 1.0/sr)
+    return fft, xf
+
+def goertzel(samples, sample_rate, *freqs):
+    """
+    Credits: https://stackoverflow.com/a/13512168 
+    Implementation of the Goertzel algorithm, useful for calculating individual
+    terms of a discrete Fourier transform.
+
+    `samples` is a windowed one-dimensional signal originally sampled at `sample_rate`.
+
+    The function returns 2 arrays, one containing the actual frequencies calculated,
+    the second the coefficients `(real part, imag part, power)` for each of those frequencies.
+    For simple spectral analysis, the power is usually enough.
+
+    Example of usage : 
+
+        # calculating frequencies in ranges [400, 500] and [1000, 1100]
+        # of a windowed signal sampled at 44100 Hz
+
+        freqs, results = goertzel(some_samples, 44100, (400, 500), (1000, 1100))
+    """
+    window_size = len(samples)
+    f_step = sample_rate / float(window_size)
+    f_step_normalized = 1.0 / window_size
+
+    # Calculate all the DFT bins we have to compute to include frequencies
+    # in `freqs`.
+    bins = set()
+    for f_range in freqs:
+        f_start, f_end = f_range
+        k_start = int(math.floor(f_start / f_step))
+        k_end = int(math.ceil(f_end / f_step))
+
+        if k_end > window_size - 1: raise ValueError('frequency out of range %s' % k_end)
+        bins = bins.union(range(k_start, k_end))
+
+    # For all the bins, calculate the DFT term
+    n_range = range(0, window_size)
+    freqs = []
+    results = []
+    for k in bins:
+
+        # Bin frequency and coefficients for the computation
+        f = k * f_step_normalized
+        w_real = 2.0 * math.cos(2.0 * math.pi * f)
+        w_imag = math.sin(2.0 * math.pi * f)
+
+        # Doing the calculation on the whole sample
+        d1, d2 = 0.0, 0.0
+        for n in n_range:
+            y  = samples[n] + w_real * d1 - d2
+            d2, d1 = d1, y
+
+        # Storing results `(real part, imag part, power)`
+        results.append((
+            0.5 * w_real * d1 - d2, w_imag * d1,
+            d2**2 + d1**2 - w_real * d1 * d2)
+        )
+        freqs.append(f * sample_rate)
+    return freqs, results
 
 def rms(data: np.array):
+    """Rerurn RMS value of array"""
     return np.sqrt(data.dot(data)/data.size)
 
 def calculate(v: np.array, i: np.array, sr: int):
@@ -27,15 +123,22 @@ def calculate(v: np.array, i: np.array, sr: int):
     # Number of samples for a complete main phase
     sfos = int(math.ceil(sr/50.0))
     
+    # Estimate Line Frequency by number of voltage zero crossings
+    time = len(v)/sr
+    signs = np.sign(v)
+    # Since np.sign(0) yields 0, we treat them as negative sign here
+    signs[signs == 0] = -1
+    zc = len(np.where(np.diff(signs))[0])/2*time
+    lineFreq = 60
+    if abs(zc-50.0) < abs(zc-60.0): lineFreq = 50
+    print(lineFreq)
+
     # We want a full number of sines
     e = int(int(len(v)/sfos))*sfos
 
     data = np.recarray((e,), dtype=[("v", np.float32), ("i", np.float32)]).view(np.recarray)
     data["v"] = v[:e]
     data["i"] = i[:e]
-
-    # FFT size to use
-    NFFT = 1024
 
     # Features:
     # *** TIME DOMAIN *** **********************************
@@ -168,25 +271,35 @@ def calculate(v: np.array, i: np.array, sr: int):
     ICR = rms(periods[0]["i"])/rms(periods[-1]["i"])
 
     # *** FREQUENCY DOMAIN *** **********************************
-    # use the welch method to get frequencs spectrum
-    f, FFT = scipy.signal.welch(data["i"], sr, nperseg=NFFT, scaling="spectrum", window="hamming", average='median')
-    
-    # Old FFT Style:
+    # NFFT = 1024
+    NFFT = len(data)
+    FFT, f = fft(data["i"], sr, win="hamming")
+
+    # NFFT_2 = math.floor(NFFT/2)
+    # Use cleaned FFT
+    #f, FFT = scipy.signal.welch(data["i"], sr, nperseg=NFFT, scaling="spectrum", window="hamming", average='median')
     # Use FFT
     # hamData = np.hamming(NFFT)*data["i"][:NFFT]
     # FFT = np.abs(np.fft.rfft(hamData, norm="ortho", n=NFFT)[:NFFT//2]/NFFT)
-    # f = np.linspace(0.0, 0.5*sr, NFFT/2)
+    # f = [i * (sr / NFFT) for i in range(int(NFFT_2))]
 
     # ********************* Harmonic Energy Distribution ******************
     # Vector of 20 values; Magnitudes of 50, 100, 150, ..., 1000Hz
     # Calculate Harmonic Energy Distribution
-    HEDFreqs = [float(i*50.0) for i in range(1, 20)]
+    HEDFreqs = [float(i*lineFreq) for i in range(1, 20)]
+    
+    # goertz = [goertzel(data["i"], sr, [f-2, f+2]) for f in HEDFreqs]
+    # print(goertz[0])
+
     # Use margin around goal freq to calculate single harmonic magnitude
     # NOTE: This is not nice
     indices = [[i for i, f_ in enumerate(f) if abs(f_-freq_) < 3] for freq_ in HEDFreqs]
-    Harm = [sum(FFT[ind]) for ind in indices]
+    #for fr, ind in zip(HEDFreqs, indices):
+    #    print("{}: {} - {} - {}".format(fr, ind, f[ind], spec[ind]))
+    Harm = [sum(FFT[ind]) if len(ind) > 0 else 0 for ind in indices]
+    if Harm[0] == 0: raise AssertionError("Coul not determine Harmonics, maybe increase FFT size")
     HED = Harm[1:]/Harm[0]
-
+    
     # ********************* Total Harmonic Distortion *********************
     THD = 10*np.log10(sum(Harm[1:6])/Harm[0])
 
@@ -215,8 +328,10 @@ def calculate(v: np.array, i: np.array, sr: int):
     # Needs to be investigated further. Waveform has better FREQUENCY
     # resolution for lower frequencies
     cA, cD = pywt.dwt(data["i"], 'db1')
+    WT = [cA, cD]
     
     x = {
+        "LF":       lineFreq, 
         "P":        p, 
         "Q":        q, 
         "S":        s, 
