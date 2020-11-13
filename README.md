@@ -95,4 +95,4 @@ plt.show()
 
 Which gives you a plot like:
 
-<img src="docu\plot.png" width="500">
+<img src="docu\plot.png" width="550">
